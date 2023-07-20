@@ -14,6 +14,23 @@ if [[ "$RESTIC_CACHE" == "yes" ]]; then
   wait $!
 fi
 
+## Cleanup yum update
+CLEAN_YUM="yes"
+if [[ "$CLEAN_YUM" == "yes" ]]; then
+  echo "Cleanup yum..."
+  yum clean all && rm -rf /var/cache/yum
+  wait $!
+fi
+
+## Cleanup tmp folder (older than 1 month or larger than 100MB)
+TMP="yes"
+if [[ "$TMP" == "yes" ]]; then
+  echo "Cleanup tmp..."
+  find  /tmp -mtime +30 -size +100M -exec rm -f {} \; 
+  wait $!
+fi
+
+
 ## Removing Installatron backups
 INSTALLATRON="yes"  ## will remove Installatron backups
 if [[ "$INSTALLATRON" == "yes" ]]; then
