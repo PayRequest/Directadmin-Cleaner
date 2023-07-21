@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Directadmin CLEANER Settings
-discord="#"
+discord="https://discord.com/api/webhooks/#"
 HOSTNAME=$(hostname)
 
 # Vrije ruimte aan het begin
@@ -13,23 +13,6 @@ if [[ "$RESTIC_CACHE" == "yes" ]]; then
   rm -rf /root/.cache/restic/*
   wait $!
 fi
-
-## Cleanup yum update
-CLEAN_YUM="yes"
-if [[ "$CLEAN_YUM" == "yes" ]]; then
-  echo "Cleanup yum..."
-  yum clean all && rm -rf /var/cache/yum
-  wait $!
-fi
-
-## Cleanup tmp folder (older than 1 month or larger than 100MB)
-TMP="yes"
-if [[ "$TMP" == "yes" ]]; then
-  echo "Cleanup tmp..."
-  find  /tmp -mtime +30 -size +100M -exec rm -f {} \; 
-  wait $!
-fi
-
 
 ## Removing Installatron backups
 INSTALLATRON="yes"  ## will remove Installatron backups
@@ -90,6 +73,24 @@ if [[ "$VAR_LOG_HTTPD" == "yes" ]]; then
   echo "Empty HTTPD Logs…."
   truncate -s 0 /var/log/httpd/sulsphp_log* /var/log/httpd/error_lo* /var/log/httpd/access_l* /var/log/httpd/domains/*.log /var/log/httpd/domains/*.log* /var/log/httpd/domains/*.log-2*
   wait $!
+fi
+
+# Empty Magento 2 caches
+MAGENTO_CACHE="yes"
+if [[ "$MAGENTO_CACHE" == "yes" ]]; then
+# Clean all Magento 2 caches
+# Loop through all user directories in /home
+find /home/ -type d \( -name "bin" -a ! -path "*/dev/tests/*" -a ! -path "*/vendor/magento/*" \) -exec find {} -type f -name "magento" \; | while IFS= read -r dir; do
+  processed_path=$(echo "$dir")
+  user=$(echo "$processed_path" | awk -F'/' '{print $3}')
+  echo "User: $user"
+  echo "Magento 2 installation found in: $processed_path"
+  echo "Emptying Magento 2 caches..."
+  php_version=$(ls -1 /usr/local/directadmin/data/users/"$(basename "$user")"/php/php-fpm*.conf | awk -F'php-fpm|.conf' '{print $2}' | sort -nr | head -1)
+  php_path="/usr/local/php$php_version/bin/php"
+  "$php_path" "$processed_path" cache:flush
+  wait $!
+  done
 fi
 
 # Vrije ruimte aan het einde
