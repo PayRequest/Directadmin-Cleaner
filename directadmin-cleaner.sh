@@ -1,116 +1,121 @@
 #!/usr/bin/env bash
-# Directadmin CLEANER Settings
-discord="https://discord.com/api/webhooks/#"
+
+# ----------------------
+# DirectAdmin CLEANER
+# ----------------------
+
 HOSTNAME=$(hostname)
 
 # Vrije ruimte aan het begin
 vrije_ruimte_begin=$(df -h | awk '/\/$/ {print $4}')
 
-## Removing Installatron backups
-RESTIC_CACHE="yes"  ## remove the restic cache
-if [[ "$RESTIC_CACHE" == "yes" ]]; then
-  echo "Removing Restic cache..."
-  rm -rf /root/.cache/restic/*
-  wait $!
-fi
+# ----------------------
+# Cleanup: Restic cache
+# ----------------------
+echo "Removing Restic cache..."
+rm -rf /root/.cache/restic/*
 
-## Removing Installatron backups
-INSTALLATRON="yes"  ## will remove Installatron backups
-if [[ "$INSTALLATRON" == "yes" ]]; then
-  echo "Removing Installatron backups..."
-  rm -rf /home/*/application_backups/*.tar.gz
-  wait $!
-fi
+# ------------------------------
+# Cleanup: Installatron backups
+# ------------------------------
+echo "Removing Installatron backups..."
+rm -rf /home/*/application_backups/*.tar.gz
 
-## Removing Magento Logs files
-MAGENTO_LOGS="yes"  ## will remove Magento logs
-if [[ "$MAGENTO_LOGS" == "yes" ]]; then
-  echo "Removing Magento Logs..."
-  truncate -s 0 /home/*/domains/*/public_html/var/log/*.log
-  wait $!
-fi
+# ----------------------
+# Cleanup: Magento logs
+# ----------------------
+echo "Truncating Magento logs..."
+truncate -s 0 /home/*/domains/*/public_html/var/log/*.log
 
-USER_LOGS="yes"  ## will remove User logs
-if [[ "$USER_LOGS" == "yes" ]]; then
-  echo "Removing user log backups…."
-  rm -rf /home/*/domains/*/logs/*.tar.gz
-  wait $!
-fi
+# ---------------------
+# Cleanup: User log tar.gz
+# ---------------------
+echo "Removing user log backups..."
+rm -rf /home/*/domains/*/logs/*.tar.gz
 
-SYSTEM_LOGS="yes"  ## will empty System logs (/var/log)
-if [[ "$SYSTEM_LOGS" == "yes" ]]; then
-  echo "Empty system log files…."
-  ## Empty System Logs files
-  truncate -s 0 /var/log/maillog-* /var/log/secure-* /var/log/messages-* /var/log/yum.log-* /var/log/wtmp-* /var/log/dovecot*.log /var/log/cron-* /var/log/btmp-* /var/log/exim/rejectlog-* /var/log/exim/spooler-*  /var/log/exim/secure-*  /var/log/exim/pureftpd.log-*
-  wait $!
-fi
+# ---------------------
+# Cleanup: System logs
+# ---------------------
+echo "Emptying system log files..."
+truncate -s 0 /var/log/maillog-* /var/log/secure-* /var/log/messages-* /var/log/yum.log-* /var/log/wtmp-* /var/log/dovecot*.log /var/log/cron-* /var/log/btmp-* /var/log/exim/rejectlog-* /var/log/exim/spooler-*  /var/log/exim/secure-*  /var/log/exim/pureftpd.log-*
 
-USER_STATS="yes"  ## will remove User website visitor logs
-if [[ "$USER_STATS" == "yes" ]]; then
-  echo "Removing user log backups…."
-  rm -rf /home/*/domains/*/stats/ctry_usage_*.png && /home/*/domains/*/stats/daily_usage_*.png && /home/*/domains/*/stats/hourly_usage_*.png && /home/*/domains/*/stats/usage_*.html
-  wait $!
-fi
+# --------------------------
+# Cleanup: User visitor stats
+# --------------------------
+echo "Removing user visitor stats..."
+rm -rf /home/*/domains/*/stats/ctry_usage_*.png
+rm -rf /home/*/domains/*/stats/daily_usage_*.png
+rm -rf /home/*/domains/*/stats/hourly_usage_*.png
+rm -rf /home/*/domains/*/stats/usage_*.html
 
-WORDPRESS_BACKUPS="yes"  ## will remove User website visitor logs
-if [[ "$WORDPRESS_BACKUPS" == "yes" ]]; then
-  echo "Removing WordPress backups…."
-  rm -rf /home/*/domains/*/public_html/*/wp-content/ai1wm-backups/*.wpress && rm -rf /home/*/domains/*/public_html/wp-content/updraft/*.zip
-  wait $!
-fi
+# ------------------------
+# Cleanup: WordPress backups
+# ------------------------
+echo "Removing WordPress backup files..."
+rm -rf /home/*/domains/*/public_html/*/wp-content/ai1wm-backups/*.wpress
+rm -rf /home/*/domains/*/public_html/wp-content/updraft/*.zip
 
-WEBALIZER="yes"
-# ## will remove WEBALIZER current file
-if [[ "$WEBALIZER" == "yes" ]]; then
-  echo "Empty WebAlizer stats…."
-  truncate -s 0 /home/*/domains/*/stats/webalizer.current
-  wait $!
-fi
+# ----------------------
+# Cleanup: Webalizer stats
+# ----------------------
+echo "Emptying Webalizer stats..."
+truncate -s 0 /home/*/domains/*/stats/webalizer.current
 
-# Empty HTTPD Logs
-VAR_LOG_HTTPD="yes"
-if [[ "$VAR_LOG_HTTPD" == "yes" ]]; then
-  echo "Empty HTTPD Logs…."
-  truncate -s 0 /var/log/httpd/sulsphp_log* /var/log/httpd/error_lo* /var/log/httpd/access_l* /var/log/httpd/domains/*.log /var/log/httpd/domains/*.log* /var/log/httpd/domains/*.log-2*
-  wait $!
-fi
+# ----------------------
+# Cleanup: HTTPD logs
+# ----------------------
+echo "Emptying HTTPD logs..."
+truncate -s 0 /var/log/httpd/sulsphp_log* /var/log/httpd/error_lo* /var/log/httpd/access_l* /var/log/httpd/domains/*.log /var/log/httpd/domains/*.log* /var/log/httpd/domains/*.log-2*
 
-# Empty Magento 2 caches
-MAGENTO_CACHE="yes"
-if [[ "$MAGENTO_CACHE" == "yes" ]]; then
-# Clean all Magento 2 caches
-# Loop through all user directories in /home
+# ----------------------
+# Cleanup: Magento 2 caches
+# ----------------------
+echo "Flushing Magento 2 caches (if any found)..."
 find /home/ -type d \( -name "bin" -a ! -path "*/dev/tests/*" -a ! -path "*/vendor/magento/*" \) -exec find {} -type f -name "magento" \; | while IFS= read -r dir; do
   processed_path=$(echo "$dir")
   user=$(echo "$processed_path" | awk -F'/' '{print $3}')
   echo "User: $user"
   echo "Magento 2 installation found in: $processed_path"
   echo "Emptying Magento 2 caches..."
-  php_version=$(ls -1 /usr/local/directadmin/data/users/"$(basename "$user")"/php/php-fpm*.conf | awk -F'php-fpm|.conf' '{print $2}' | sort -nr | head -1)
+  php_version=$(ls -1 /usr/local/directadmin/data/users/"$(basename "$user")"/php/php-fpm*.conf 2>/dev/null | awk -F'php-fpm|.conf' '{print $2}' | sort -nr | head -1)
   php_path="/usr/local/php$php_version/bin/php"
   "$php_path" "$processed_path" cache:flush
-  wait $!
   done
-fi
+
+# -----------------------------
+# Cleanup: WordPress cache/logs
+# -----------------------------
+echo "Cleaning WordPress cache, logs, wpallimport..."
+# WP All Import logs
+find /home/*/domains/*/public_html/wp-content/uploads/wpallimport/logs/ -type f -delete 2>/dev/null
+# Wordfence logs
+find /home/*/domains/*/public_html/wp-content/wflogs/ -type f -delete 2>/dev/null
+# General cache folders
+find /home/*/domains/*/public_html/wp-content/cache/ -type f -delete 2>/dev/null
+find /home/*/domains/*/public_html/wp-content/plugins/w3-total-cache/ -type f -delete 2>/dev/null
+find /home/*/domains/*/public_html/wp-content/webp-express/log/ -type f -delete 2>/dev/null
+
+# Verwijderen van BackupBuddy-backups
+find /home/*/domains/*/public_html/wp-content/uploads/backupbuddy_backups/ -type f -name "*.zip" -exec rm -f {} \;
+
+# Verwijderen van UpdraftPlus backups (.zip en .gz bestanden)
+find /home/*/domains/*/public_html/wp-content/updraft/ -type f \( -name "*.zip" -o -name "*.gz" \) -delete 2>/dev/null
+
+# Verwijderen van All-in-One WP Migration backups (.wpress bestanden)
+find /home/*/domains/*/public_html/wp-content/ai1wm-backups/ -type f -name "*.wpress" -delete 2>/dev/null
+
+# WooCommerce fatal error logs ouder dan 7 dagen
+find /home/*/domains/*/public_html/wp-content/uploads/wc-logs/ -type f -name "fatal-errors*" -mtime +7 -delete 2>/dev/null
 
 # Vrije ruimte aan het einde
 vrije_ruimte_einde=$(df -h | awk '/\/$/ {print $4}')
-
-# Verwijderen van de 'G' uit de waarden
 vrije_ruimte_begin=${vrije_ruimte_begin%G}
 vrije_ruimte_einde=${vrije_ruimte_einde%G}
-
-# Berekenen hoeveel ruimte er is bespaard
 bespaarde_ruimte=$((vrije_ruimte_einde - vrije_ruimte_begin))
-
-# Toevoegen van de 'G' aan de uitvoer
 bespaarde_ruimte="${bespaarde_ruimte} GB"
 
-# Weergeven van de resultaten
-echo "Vrije ruimte aan het begin: $vrije_ruimte_begin"
-echo "Vrije ruimte aan het einde: $vrije_ruimte_einde"
+echo "----------------------"
+echo "Vrije ruimte aan het begin: $vrije_ruimte_begin GB"
+echo "Vrije ruimte aan het einde: $vrije_ruimte_einde GB"
 echo "Bespaarde ruimte: $bespaarde_ruimte"
-
-# send to Discord
-DISCORD_MESSAGE='{"content": "Cleaning Report for: '${HOSTNAME}', '${bespaarde_ruimte}' Diskspace saved.  "}'
-curl -H "Content-Type: application/json" -X POST -d "$DISCORD_MESSAGE" "$discord"
+echo "----------------------"
